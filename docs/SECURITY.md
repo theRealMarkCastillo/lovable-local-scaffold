@@ -67,3 +67,11 @@ Google/Apple/SMTP/payment/AI credentials are not configured. Supabase Auth is al
 the identity layer here; Keycloak would be an optional reviewed federation choice,
 not an additional mandatory local login service. Apple real login needs a registered
 HTTPS domain and provider-specific key lifecycle handling.
+
+## Identity transitions
+
+Private UI state is user-owned and async results are checked against an identity
+snapshot before being shown. Sign-out/account changes clear state and invalidate
+older work, including a later sign-in by the same user. This supplements RLS; it
+never replaces authorization. `make browser-test` exercises delayed notes/files
+across an account switch. See [review fixes and limits](REVIEW.md).

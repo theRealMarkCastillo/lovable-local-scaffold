@@ -7,6 +7,8 @@ import io
 import json
 import tempfile
 import unittest
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('backend', Path(__file__).resolve().parents[1] / 'scripts/backend.py')

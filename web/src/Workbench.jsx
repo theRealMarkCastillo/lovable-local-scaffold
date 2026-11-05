@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { createIdentityScope } from "./session-state.js";
 
 export default function Workbench({ config }) {
   const [supabase] = useState(() =>
@@ -16,9 +17,14 @@ export default function Workbench({ config }) {
   const [user, setUser] = useState(null),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
-  const [notes, setNotes] = useState([]),
-    [files, setFiles] = useState([]),
-    [analysis, setAnalysis] = useState(null);
+  const scope = useRef(null);
+  if (!scope.current) scope.current = createIdentityScope();
+  const [noteState, setNoteState] = useState({ owner: null, data: [] });
+  const [fileState, setFileState] = useState({ owner: null, data: [] });
+  const [analysisState, setAnalysisState] = useState({ owner: null, data: null });
+  const notes = noteState.owner === user?.id ? noteState.data : [];
+  const files = fileState.owner === user?.id ? fileState.data : [];
+  const analysis = analysisState.owner === user?.id ? analysisState.data : null;
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [title, setTitle] = useState("My first portable note"),
@@ -27,44 +33,60 @@ export default function Workbench({ config }) {
     );
   const [originMismatch, setOriginMismatch] = useState(false);
   const [realtime, setRealtime] = useState("connecting");
-  async function loadNotes() {
+  function acceptSession(session) {
+    const next = session?.user || null;
+    if (scope.current.setUser(next?.id || null)) {
+      setNoteState({ owner: null, data: [] });
+      setFileState({ owner: null, data: [] });
+      setAnalysisState({ owner: null, data: null });
+      setNotice("");
+      setBusy(false);
+      setRealtime("connecting");
+    }
+    setUser(next);
+  }
+  async function loadNotes(ticket = scope.current.ticket()) {
     const { data, error } = await supabase
       .from("notes")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw error;
-    setNotes(data);
+    if (scope.current.accepts(ticket) && ticket.userId)
+      setNoteState({ owner: ticket.userId, data });
   }
-  async function loadFiles(uid) {
+  async function loadFiles(uid, ticket = scope.current.ticket()) {
     const { data, error } = await supabase.storage.from("uploads").list(uid);
     if (error) throw error;
-    setFiles(data.filter((file) => file.name !== ".emptyFolderPlaceholder"));
+    if (scope.current.accepts(ticket) && uid === ticket.userId)
+      setFileState({ owner: uid, data: data.filter((file) => file.name !== ".emptyFolderPlaceholder") });
   }
   async function perform(task) {
+    const ticket = scope.current.ticket();
     setBusy(true);
     setNotice("");
     try {
-      await task();
+      await task(ticket);
     } catch (error) {
-      setNotice(error.message || "Request failed");
+      if (scope.current.accepts(ticket)) setNotice(error.message || "Request failed");
     } finally {
-      setBusy(false);
+      if (scope.current.accepts(ticket)) setBusy(false);
     }
   }
   useEffect(() => {
     setOriginMismatch(new URL(config.publicUrl || config.supabaseUrl).origin !== location.origin);
     let alive = true;
+    const initial = scope.current.ticket();
     supabase.auth.getSession().then(({ data, error }) => {
-      if (alive) {
-        setUser(data.session?.user || null);
+      if (alive && scope.current.accepts(initial)) {
+        acceptSession(data.session);
         if (error) setNotice(error.message);
       }
     });
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
+      acceptSession(session);
     });
     return () => {
       alive = false;
@@ -72,34 +94,28 @@ export default function Workbench({ config }) {
     };
   }, []);
   useEffect(() => {
-    if (!user) {
-      setNotes([]);
-      setFiles([]);
-      setAnalysis(null);
-      return;
-    }
-    loadNotes().catch((e) => setNotice(e.message));
-    loadFiles(user.id).catch((e) => setNotice(e.message));
+    if (!user) return;
+    const ticket = scope.current.ticket();
+    const failure = (error) => {
+      if (scope.current.accepts(ticket)) setNotice(error.message);
+    };
+    loadNotes(ticket).catch(failure);
+    loadFiles(user.id, ticket).catch(failure);
     const channel = supabase
       .channel("my-notes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notes",
-          filter: `owner_id=eq.${user.id}`,
-        },
-        () => loadNotes().catch((e) => setNotice(e.message)),
-      )
-      .subscribe((status) => setRealtime(status.toLowerCase()));
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "notes", filter: `owner_id=eq.${user.id}`,
+      }, () => {
+        if (scope.current.accepts(ticket)) loadNotes(ticket).catch(failure);
+      })
+      .subscribe((status) => {
+        if (scope.current.accepts(ticket)) setRealtime(status.toLowerCase());
+      });
+    return () => { supabase.removeChannel(channel); };
   }, [user?.id]);
   async function login(event) {
     event.preventDefault();
-    await perform(async () => {
+    await perform(async (ticket) => {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -108,53 +124,54 @@ export default function Workbench({ config }) {
     });
   }
   async function signup() {
-    await perform(async () => {
+    await perform(async (ticket) => {
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: { emailRedirectTo: location.origin },
       });
       if (error) throw error;
-      setNotice(
+      if (scope.current.accepts(ticket)) setNotice(
         "Check the local Mailpit inbox, open the confirmation link, then sign in.",
       );
     });
   }
   async function save(event) {
     event.preventDefault();
-    await perform(async () => {
+    await perform(async (ticket) => {
       const { error } = await supabase.from("notes").insert({ title, body });
       if (error) throw error;
-      await loadNotes();
+      await loadNotes(ticket);
     });
   }
   async function remove(id) {
-    await perform(async () => {
+    await perform(async (ticket) => {
       const { error } = await supabase.from("notes").delete().eq("id", id);
       if (error) throw error;
-      await loadNotes();
+      await loadNotes(ticket);
     });
   }
   async function upload(event) {
     const file = event.target.files?.[0];
     if (!file) return;
-    await perform(async () => {
+    await perform(async (ticket) => {
       const name = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `${user.id}/${crypto.randomUUID()}-${name}`;
       const { error } = await supabase.storage
         .from("uploads")
         .upload(path, file);
       if (error) throw error;
-      await loadFiles(user.id);
+      await loadFiles(user.id, ticket);
     });
     event.target.value = "";
   }
   async function download(name) {
-    await perform(async () => {
+    await perform(async (ticket) => {
       const { data, error } = await supabase.storage
         .from("uploads")
         .download(`${user.id}/${name}`);
       if (error) throw error;
+      if (!scope.current.accepts(ticket)) return;
       const url = URL.createObjectURL(data);
       const link = document.createElement("a");
       link.href = url;
@@ -164,16 +181,17 @@ export default function Workbench({ config }) {
     });
   }
   async function analyze() {
-    await perform(async () => {
+    await perform(async (ticket) => {
       const { data, error } = await supabase.functions.invoke("analyze", {
         body: { text: body },
       });
       if (error) throw error;
-      setAnalysis(data);
+      if (scope.current.accepts(ticket))
+        setAnalysisState({ owner: ticket.userId, data });
     });
   }
   async function logout() {
-    await perform(async () => {
+    await perform(async (ticket) => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     });

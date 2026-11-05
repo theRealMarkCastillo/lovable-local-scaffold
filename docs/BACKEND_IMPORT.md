@@ -3,7 +3,8 @@
 This workflow covers repository exports and separately downloaded artifacts. It
 collects files first, then makes local execution explicit. It does not fetch a live
 Lovable project, copy real users by default, deploy anything, or convert every
-export into a working app without review. Python 3.11+ is required.
+export into a working app without review. Python 3.11+ is required. Run `make tools` once before direct Python commands;
+Make targets bootstrap the pinned local SQL parser automatically.
 
 ## What to obtain
 
@@ -154,11 +155,14 @@ files, edited applied SQL or pre-existing external history require deliberate
 reconciliation. The runner does not automatically baseline an existing database. Manual SQL uses
 only the private ledger. No migration-history repair is performed automatically.
 
-Migrations with psql commands or explicit transaction control are refused. Operations
+Migrations with psql commands or top-level transaction control are refused using the
+pinned PostgreSQL AST parser, including aliases such as COMMIT WORK and END. Operations
 that cannot run in a transaction need a separate reviewed workflow. The runner does
-not provide down migrations, parse every SQL statement for safety, or prove schema
-compatibility. Inspect private `.runtime/backend-*.log` files on failure; these may
-contain SQL/data and must not be pasted into public logs.
+not provide down migrations, a SQL sandbox, or proof of destination compatibility.
+Review dynamic SQL, functions/extensions and side effects deliberately. See the
+parser/tooling notes in [VALIDATION.md](VALIDATION.md) and [review fixes](REVIEW.md).
+Inspect private `.runtime/backend-*.log` files on failure; they may contain SQL/data
+and must not be pasted into public logs. Earlier files may already be committed.
 
 ## Restore a database export selectively
 

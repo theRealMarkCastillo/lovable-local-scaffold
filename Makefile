@@ -1,31 +1,48 @@
-.PHONY: init up down logs check smoke admin origin frontend
-init:
-	python3 scripts/stack.py init
-up:
-	python3 scripts/stack.py up
-down:
-	python3 scripts/stack.py down
-logs:
-	python3 scripts/stack.py logs
-check:
-	python3 scripts/stack.py check
-smoke:
-	python3 scripts/smoke.py
-admin:
-	python3 scripts/stack.py admin
-origin:
-	python3 scripts/stack.py origin "$(URL)"
+PYTHON ?= .venv-tools/bin/python
 
-frontend:
-	python3 scripts/stack.py frontend "$(KIND)"
+.PHONY: init up down logs check smoke admin origin frontend
+init: tools
+	$(PYTHON) scripts/stack.py init
+up: tools
+	$(PYTHON) scripts/stack.py up
+down: tools
+	$(PYTHON) scripts/stack.py down
+logs: tools
+	$(PYTHON) scripts/stack.py logs
+check: tools
+	$(PYTHON) scripts/stack.py check
+smoke: tools
+	$(PYTHON) scripts/smoke.py
+admin: tools
+	$(PYTHON) scripts/stack.py admin
+origin: tools
+	$(PYTHON) scripts/stack.py origin "$(URL)"
+
+frontend: tools
+	$(PYTHON) scripts/stack.py frontend "$(KIND)"
 
 # Import/inspection only; execution commands are intentionally explicit in the guide.
-backend-import:
-	python3 scripts/backend.py import "$(SOURCE)" --name "$(NAME)"
-backend-inspect:
-	python3 scripts/backend.py inspect "$(NAME)"
+backend-import: tools
+	$(PYTHON) scripts/backend.py import "$(SOURCE)" --name "$(NAME)"
+backend-inspect: tools
+	$(PYTHON) scripts/backend.py inspect "$(NAME)"
 
-backend-test:
-	python3 -m unittest discover -s tests -v
-backend-test-integration:
-	python3 tests/integration_backend.py
+backend-test: tools
+	$(PYTHON) -m unittest discover -s tests -v
+backend-test-integration: tools
+	$(PYTHON) tests/integration_backend.py
+
+frontend-test: tools
+	node --test web/tests/session-state.test.mjs
+
+.PHONY: tools frontend-test browser-test
+tools:
+	python3 scripts/setup_tools.py
+
+browser-test: tools
+	node tests/browser-account-switch.mjs
+
+.PHONY: tunnel tunnel-set
+tunnel:
+	python3 scripts/tunnel.py
+tunnel-set: origin

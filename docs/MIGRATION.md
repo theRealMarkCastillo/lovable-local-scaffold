@@ -21,7 +21,9 @@ secrets or `.env` values. Static matches are leads, not proof of runtime behavio
 
 Run `python3 scripts/preflight.py /path/to/export` as well for framework and
 cross-platform lockfile checks. See [SSR migration lessons](SSR_MIGRATION.md) for
-the tested TanStack Start dashboard case and optional Keycloak integration.
+the tested TanStack Start dashboard case and optional Keycloak integration. Preflight reports SQL counts for both Supabase and Drizzle, validates Drizzle's
+journal order and distinguishes incomplete metadata from missing schema. Inspect
+both inventories before choosing the migration layout; see [review fixes](REVIEW.md).
 
 ## Suggested migration sequence
 
@@ -92,8 +94,9 @@ accepted by a fresh local project's independent signing keys.
 
 Supabase uses browser access to APIs protected by RLS. The earlier FastAPI/Keycloak
 scaffold uses a different trust model. Replacing one with the other is an application
-migration, not a connection-string change. Neon alone is Postgres, not the Supabase
-Auth/PostgREST/Storage/Realtime/Functions platform.
+migration, not a connection-string change. A Neon Postgres connection alone does
+not supply the complete Supabase contract; Neon also has Auth/Data API capabilities.
+See [hosting alternatives](CLOUD.md) for the explicit migration boundary.
 
 ## What should be optional?
 

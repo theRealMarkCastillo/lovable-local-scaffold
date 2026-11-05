@@ -13,6 +13,24 @@ instances default to TanStack. Existing instances without FRONTEND_KIND keep Vit
 Inspect the actual package.json when migrating an export.
 [Verified stack details and sources](docs/LOVABLE_STACK.md).
 
+
+## Choose the matching scaffold
+
+| Starting point | Repository |
+| --- | --- |
+| New app using Supabase Auth, RLS, Storage, Realtime and Functions | [supabase-local-cloud-scaffold](https://github.com/theRealMarkCastillo/supabase-local-cloud-scaffold) |
+| Existing exported app whose Supabase interfaces should be retained | [lovable-local-scaffold](https://github.com/theRealMarkCastillo/lovable-local-scaffold) |
+| Custom API, OIDC sessions and independently selected data/worker/storage services | [local-cloud-demo](https://github.com/theRealMarkCastillo/local-cloud-demo) |
+
+A worker can also be added to the Supabase starter; it does not automatically require
+Redis. The main choice is Supabase's backend API contract versus your own API contract.
+Repository links are private and require account access.
+
+Review fixes, checks and scope: [review record](docs/REVIEW.md).
+
+Public/internal URL configuration, tunnels and cloud callback registrations:
+[URLs and callbacks](docs/URLS_AND_CALLBACKS.md).
+
 ## Run locally
 
 If adapting an existing export, run preflight first and preserve its environment

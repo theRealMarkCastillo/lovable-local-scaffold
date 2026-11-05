@@ -1,6 +1,6 @@
 """Collect and review Lovable backend exports; execute only explicit local actions.
 
-Python 3.11+, standard library only. Import never executes exported code or SQL.
+Python 3.11+; SQL execution uses the pinned local PostgreSQL parser. Import never executes exported code or SQL.
 """
 from pathlib import Path, PurePosixPath
 import argparse
@@ -277,10 +277,9 @@ def migrate(args):
     order = migration_order(root, data, args.layout)
     if not order:
         fail('No migrations in the selected layout')
+    from sql_safety import validate_sql
     for path, _, _ in order:
-        sql = (root / path).read_text()
-        if re.search(r'^\s*\\', sql, re.M) or re.search(r'^\s*(?:BEGIN|COMMIT|ROLLBACK|START\s+TRANSACTION)\s*;', sql, re.I | re.M):
-            fail('Migration has psql commands or explicit transaction control; use a separately reviewed restore process')
+        validate_sql((root / path).read_text())
     print(json.dumps({'layout': args.layout, 'order': [path for path, _, _ in order], 'execute': args.execute}))
     if not args.execute:
         return
@@ -309,6 +308,7 @@ SELECT pg_advisory_xact_lock(879311);
 CREATE SCHEMA IF NOT EXISTS scaffold_imports;
 REVOKE ALL ON SCHEMA scaffold_imports FROM PUBLIC, anon, authenticated;
 CREATE TABLE IF NOT EXISTS scaffold_imports.applied(name text PRIMARY KEY, checksum text NOT NULL, first_bundle text NOT NULL);
+SET LOCAL standard_conforming_strings=on;
 SELECT EXISTS(SELECT 1 FROM scaffold_imports.applied WHERE name={key}) AS applied \\gset
 \\if :applied
 DO $$ BEGIN IF (SELECT checksum FROM scaffold_imports.applied WHERE name={key}) <> '{checksum}' THEN RAISE EXCEPTION 'Import checksum changed'; END IF; END $$;

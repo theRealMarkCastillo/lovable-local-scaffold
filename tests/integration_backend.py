@@ -11,7 +11,7 @@ def free_port():
 
 with tempfile.TemporaryDirectory(prefix='lovable-backend-integration-') as directory:
     root=Path(directory).resolve();(root/'scripts').mkdir()
-    for name in ('stack.py','backend.py'):shutil.copyfile(REPO/'scripts'/name,root/'scripts'/name)
+    for name in ('stack.py','backend.py','sql_safety.py'):shutil.copyfile(REPO/'scripts'/name,root/'scripts'/name)
     for name in ('compose.yaml','compose.tanstack.yaml'):shutil.copyfile(REPO/name,root/name)
     (root/'vendor').symlink_to(REPO/'vendor',target_is_directory=True)
     (root/'web').symlink_to(REPO/'web',target_is_directory=True)
@@ -77,6 +77,13 @@ GRANT SELECT ON import_demo.records TO anon;
         assert run(backend,'migrate','broken','--layout','supabase','--execute',check=False).returncode
         assert sql("SELECT to_regclass('import_demo.must_rollback') IS NULL;")=='t'
         print('PASS: failing migration rolls back its DDL and ledger entry',flush=True)
+        alias=root/'alias';(alias/'supabase/migrations').mkdir(parents=True)
+        (alias/'supabase/migrations/20261105010201_alias.sql').write_text('CREATE TABLE import_demo.must_not_commit(id int); COMMIT WORK; SELECT 1/0;')
+        run(backend,'import',alias,'--name','alias')
+        assert run(backend,'migrate','alias','--layout','supabase','--execute',check=False).returncode
+        assert sql("SELECT to_regclass('import_demo.must_not_commit') IS NULL;")=='t'
+        assert sql("SELECT count(*) FROM supabase_migrations.schema_migrations;")=='2'
+        print('PASS: transaction alias rejected before DDL or history changes',flush=True)
         csvdir=root/'csv-input';csvdir.mkdir();(csvdir/'records.csv').write_text('id,label\n1,csv-synthetic\n')
         sql('CREATE TABLE import_demo.csv_records(id int PRIMARY KEY,label text NOT NULL);')
         run(backend,'import',source,'--name','csv','--csv',csvdir)

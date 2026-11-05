@@ -15,3 +15,5 @@ web-tanstack/src/shared/
 !.env.hosted.tanstack.example
 
 .imports/
+
+.venv-tools/

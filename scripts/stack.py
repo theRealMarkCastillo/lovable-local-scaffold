@@ -1,4 +1,4 @@
-"""Adapt the pinned official stack without editing vendor files. No third-party Python dependencies."""
+"""Adapt the pinned official stack without editing vendor files. SQL execution uses the pinned local PostgreSQL parser."""
 from pathlib import Path
 import argparse
 import re
@@ -9,6 +9,7 @@ import json
 import os
 import secrets
 import subprocess
+import tempfile
 import sys
 import time
 from urllib.parse import urlparse
@@ -29,9 +30,49 @@ def env_values(path):
     return values
 
 def write_env(values):
-    ENV.write_text("# Generated local credentials. Do not commit or paste into logs.\n" +
-                   "\n".join(f"{k}={v}" for k,v in values.items()) + "\n")
-    ENV.chmod(0o600)
+    # Same-directory atomic replacement; even an interrupted write stays private.
+    content = "# Generated local credentials. Do not commit or paste into logs.\n" + "\n".join(f"{key}={value}" for key, value in values.items()) + "\n"
+    target = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", dir=ROOT, prefix=".env.", suffix=".tmp", delete=False) as output:
+            target = Path(output.name)
+            target.chmod(0o600)
+            output.write(content)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(target, ENV)
+    finally:
+        if target is not None:
+            target.unlink(missing_ok=True)
+
+
+def validated_origin(value):
+    if any(ord(char) <= 32 or ord(char) == 127 for char in value):
+        raise SystemExit("PUBLIC_URL must not contain whitespace or control characters")
+    origin = value.rstrip("/")
+    try:
+        parsed = urlparse(origin)
+        port = parsed.port
+        valid = (parsed.scheme in ("http", "https") and parsed.netloc and parsed.hostname
+                 and not parsed.path and not parsed.query and not parsed.fragment
+                 and parsed.username is None and parsed.password is None
+                 and (port is None or 1 <= port <= 65535))
+    except ValueError:
+        valid = False
+    if not valid:
+        raise SystemExit("PUBLIC_URL must be an HTTP(S) origin, without credentials or a path")
+    if parsed.scheme == "http" and parsed.hostname not in ("localhost", "127.0.0.1"):
+        raise SystemExit("Non-loopback PUBLIC_URL requires HTTPS")
+    return origin
+
+
+def set_origin(value):
+    initialize()
+    values = env_values(ENV)
+    values["PUBLIC_URL"] = validated_origin(value)
+    validate_settings(values)
+    write_env(values)
+
 
 def jwt(secret, role):
     def encode(value):
@@ -89,12 +130,7 @@ def render():
     values = env_values(ENV)
     values.setdefault("STACK_NAME", "lovable-local")
     validate_settings(values)
-    origin = values["PUBLIC_URL"].rstrip("/")
-    parsed = urlparse(origin)
-    if parsed.scheme not in ("http", "https") or not parsed.netloc or parsed.path or parsed.query or parsed.fragment or parsed.username:
-        raise SystemExit("PUBLIC_URL must be an HTTP(S) origin, without a path")
-    if parsed.scheme == "http" and parsed.hostname not in ("localhost","127.0.0.1"):
-        raise SystemExit("Non-loopback PUBLIC_URL requires HTTPS")
+    origin = validated_origin(values["PUBLIC_URL"])
     values.update(SUPABASE_PUBLIC_URL=origin+"/supabase", API_EXTERNAL_URL=origin+"/supabase/auth/v1",
                   SITE_URL=origin, ADDITIONAL_REDIRECT_URLS=origin+"/**", API_GW_HTTP_PORT=values.get("ADMIN_PORT","19800"),
                   MAILER_URLPATHS_CONFIRMATION="/supabase/auth/v1/verify", MAILER_URLPATHS_INVITE="/supabase/auth/v1/verify",
@@ -169,12 +205,17 @@ def migrate():
     if (RUNTIME / "active-backend.json").exists():
         print("Imported backend selected: sample SQL skipped; use scripts/backend.py migrate explicitly.")
         return
-    for path in sorted((ROOT/"supabase/migrations").glob("*.sql")):
+    from sql_safety import validate_sql
+    paths = sorted((ROOT/"supabase/migrations").glob("*.sql"))
+    for path in paths:
+        validate_sql(path.read_text())
+    for path in paths:
         checksum=hashlib.sha256(path.read_bytes()).hexdigest()
         # Filenames/checksums are repository-controlled; never interpolate user input.
         assert all(c.isalnum() or c in "_.-" for c in path.name)
         sql = rf"""BEGIN;
 SELECT pg_advisory_xact_lock(879310);
+SET LOCAL standard_conforming_strings=on;
 CREATE SCHEMA IF NOT EXISTS scaffold_internal;
 REVOKE ALL ON SCHEMA scaffold_internal FROM PUBLIC, anon, authenticated;
 CREATE TABLE IF NOT EXISTS scaffold_internal.migrations(name text PRIMARY KEY, checksum text NOT NULL);
@@ -207,7 +248,7 @@ if __name__ == "__main__":
     action = args.action
     if action == "origin":
         if not args.url:raise SystemExit("Usage: make origin URL=https://your-host")
-        initialize();values=env_values(ENV);values["PUBLIC_URL"]=args.url;write_env(values)
+        set_origin(args.url)
     if action == "frontend":
         if args.url not in ("vite", "tanstack"): raise SystemExit("Use: make frontend KIND=tanstack (or vite)")
         values=env_values(ENV);values["FRONTEND_KIND"]=args.url;write_env(values)

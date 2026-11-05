@@ -48,7 +48,8 @@ http://localhost:18025; it is loopback-only and must not be tunneled. Synthetic
 smoke/browser accounts, notes, uploads and captured messages remain local. Create
 an account through the app to choose your own credentials. No demo/demo-password
 account is seeded here. No external OAuth clients or paid services were provisioned.
-This folder is initialized as a local Git repository; no commit, remote or push.
+The source is now published in the private [GitHub repository](https://github.com/theRealMarkCastillo/lovable-local-scaffold).
+The reviewed main commit is abb67e1; subsequent review fixes and documentation are recorded alongside this report.
 
 ## Feedback from the dashboard migration — 2026-11-05
 
@@ -111,7 +112,7 @@ records the subsequently added runnable TanStack reference.
 Remaining boundaries: authenticated SSR is not implemented (sessions are browser
 managed); Linux AMD64, real Google/Apple/Keycloak flows, cloud runtime, external SMTP,
 key rotation and production restore/backup exercises remain unvalidated. The pinned
-Supabase vendor files were not upgraded. Changes remain local and uncommitted.
+Supabase vendor files were not upgraded. Those changes were subsequently committed and pushed; see the current review section.
 
 ## Backend export collection and local execution — 2026-11-05
 
@@ -142,4 +143,47 @@ Storage upload/ownership mapping, real external schedules, OAuth/SMTP/provider
 credentials and cloud runtime remain manual and unvalidated. Capturing all artifacts
 is not equivalent to proving a particular application has fully migrated. Unsupported
 custom function entrypoints and incompatible archive versions fail for adapter review.
-Changes remain local and uncommitted; no deployment or push.
+Those source changes were subsequently committed and pushed; no cloud deployment occurred.
+
+## Review fixes — 2026-11-05
+
+The review findings and implementation plan are resolved locally; see
+[REVIEW.md](REVIEW.md) for exact fixes, commands, test counts and runtime evidence.
+Application and documentation changes include the review fixes described above. No
+cloud resource or production data was changed. Earlier publication statements refer
+to the historical baseline; use Git history for subsequent fixes.
+
+### Running the added checks
+
+Make bootstraps `.venv-tools` using Python 3.11+ and installs pinned `pglast==8.7`
+from `requirements-tools.txt` ([parser documentation](https://pglast.readthedocs.io/en/latest/parser.html)). First setup needs package-download access. The parser
+is developer tooling, excluded from app images; `make tools` also enables direct
+`python3 scripts/...` commands via a subprocess fallback. Its PostgreSQL 18 grammar
+does not prove compatibility with the pinned backend's PostgreSQL version. SQL is
+still executed transactionally on that backend; unsupported operations fail there.
+
+Run Python tests and `make frontend-test` (Node 22+) without a browser. With the local
+app running, the optional browser regression requires Playwright and Chrome:
+
+```sh
+npm install --prefix .runtime/browser-tools --no-save playwright@1.62.1
+make browser-test
+```
+
+Alternatively set `SCAFFOLD_PLAYWRIGHT_PATH` to an installed `playwright/index.mjs`.
+The default uses installed Chrome. To use Playwright's Chromium, install that
+browser explicitly and set `SCAFFOLD_BROWSER_CHANNEL=chromium`. The test reads this
+project's local `.env`, creates synthetic accounts/notes/files, and refuses nonlocal
+origins. Keep its captured confirmation messages private. Extra local CA trust may
+be needed for OrbStack; do not disable certificate verification. The regression
+uses bounded waits and leaves its synthetic records for inspection.
+
+## URL and callback follow-up — 2026-11-05
+
+Added the cross-environment [URL/callback contract](URLS_AND_CALLBACKS.md), including
+external registrations, internal endpoints, cloud differences and imported-app limits.
+`make tunnel` now reads the configured local web port; the Supabase repos also provide
+`make tunnel-set` as an alias for their origin action. Dry-run checks covered the
+project port, a custom port and invalid-port refusal without launching ngrok. No
+running origin, external registration or cloud deployment was changed. Public-tunnel
+and social-provider runtime validation remain pending.
