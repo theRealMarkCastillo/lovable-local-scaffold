@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+DNS_RESOLVER=${DNS_RESOLVER:-$(awk '/^nameserver / {print $2;exit}' /etc/resolv.conf)}
+case "$DNS_RESOLVER" in *:*) DNS_RESOLVER="[$DNS_RESOLVER]" ;; esac
+export DNS_RESOLVER

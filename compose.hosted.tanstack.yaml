@@ -1,0 +1,13 @@
+name: lovable-hosted-tanstack
+services:
+  app:
+    build:
+      context: .
+      dockerfile: web-tanstack/Dockerfile
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL:?Set the frontend origin}
+      SUPABASE_BROWSER_URL: ${SUPABASE_BROWSER_URL:?Set the development backend URL}
+      SUPABASE_BROWSER_KEY: ${SUPABASE_BROWSER_KEY:?Set its public client key}
+      SUPABASE_SERVER_URL: ${SUPABASE_SERVER_URL:?Set the API URL reachable from Node}
+    ports:
+      - '127.0.0.1:${WEB_PORT:-8093}:3000'

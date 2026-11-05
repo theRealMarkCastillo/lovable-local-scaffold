@@ -1,0 +1,38 @@
+name: ${STACK_NAME:-lovable-local}
+services:
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    environment:
+      PORT: '8080'
+      API_UPSTREAM: api-gw:8000
+      SUPABASE_BROWSER_URL: ${PUBLIC_URL}/supabase
+      SUPABASE_BROWSER_KEY: ${ANON_KEY}
+    ports:
+      - '127.0.0.1:${WEB_PORT:-8090}:8080'
+    depends_on:
+      api-gw:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    restart: unless-stopped
+  mail:
+    image: axllent/mailpit:v1.29
+    ports:
+      - '127.0.0.1:${MAIL_PORT:-18025}:8025'
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: '1'
+      MP_SMTP_AUTH_ALLOW_INSECURE: '1'
+    restart: unless-stopped
+  auth:
+    environment:
+      GOTRUE_SMTP_HOST: mail
+      GOTRUE_SMTP_PORT: '1025'
+      GOTRUE_SMTP_USER: ''
+      GOTRUE_SMTP_PASS: ''
+      GOTRUE_SMTP_MAX_FREQUENCY: 1s
+      GOTRUE_RATE_LIMIT_EMAIL_SENT: '100'
+      GOTRUE_EXTERNAL_PHONE_ENABLED: 'false'

@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: lovable-local-web
+    runtime: docker
+    plan: 0.5c-512mb
+    region: virginia
+    dockerfilePath: ./web/Dockerfile
+    dockerContext: .
+    autoDeployTrigger: "off"
+    healthCheckPath: /health
+    envVars:
+      - key: API_UPSTREAM
+        value: '127.0.0.1:9'
+      - key: SUPABASE_BROWSER_URL
+        sync: false
+      - key: SUPABASE_BROWSER_KEY
+        sync: false

@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+!.env.hosted.example
+.runtime/
+node_modules/
+web/node_modules/
+web/dist/
+__pycache__/
+.DS_Store
+
+web-tanstack/.output/
+web-tanstack/.tanstack/
+web-tanstack/src/shared/
+!.env.hosted.tanstack.example
+
+.imports/

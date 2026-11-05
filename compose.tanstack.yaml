@@ -1,0 +1,33 @@
+services:
+  web:
+    build:
+      dockerfile: web-tanstack/ingress.Dockerfile
+    depends_on:
+      app:
+        condition: service_healthy
+  app:
+    build:
+      context: .
+      dockerfile: web-tanstack/Dockerfile
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL}
+      SUPABASE_BROWSER_URL: ${PUBLIC_URL}/supabase
+      SUPABASE_BROWSER_KEY: ${ANON_KEY}
+      SUPABASE_SERVER_URL: http://api-gw:8000
+    depends_on:
+      api-gw:
+        condition: service_healthy
+      rest:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped

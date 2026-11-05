@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+# Only these public values enter the browser; never source .env or serialize all env.
+case "$SUPABASE_BROWSER_URL" in http://*|https://*) ;; *) echo 'Invalid public Supabase URL' >&2; exit 1 ;; esac
+case "$SUPABASE_BROWSER_URL$SUPABASE_BROWSER_KEY" in *'"'*|*'\'*|*'<'*|*'>'*) echo 'Unsafe public config characters' >&2; exit 1 ;; esac
+printf 'window.APP_CONFIG={"supabaseUrl":"%s","supabaseKey":"%s"};\n' "$SUPABASE_BROWSER_URL" "$SUPABASE_BROWSER_KEY" > /usr/share/nginx/html/config.js
+DNS_RESOLVER=${DNS_RESOLVER:-$(awk '/^nameserver / {print $2;exit}' /etc/resolv.conf)}
+case "$DNS_RESOLVER" in *:*) DNS_RESOLVER="[$DNS_RESOLVER]" ;; esac
+export DNS_RESOLVER

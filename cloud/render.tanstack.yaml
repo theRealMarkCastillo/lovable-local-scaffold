@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: lovable-tanstack-web
+    runtime: docker
+    plan: 0.5c-512mb
+    region: virginia
+    dockerfilePath: ./web-tanstack/Dockerfile
+    dockerContext: .
+    autoDeployTrigger: "off"
+    healthCheckPath: /health
+    envVars:
+      - key: PUBLIC_URL
+        sync: false
+      - key: SUPABASE_BROWSER_URL
+        sync: false
+      - key: SUPABASE_BROWSER_KEY
+        sync: false
+      - key: SUPABASE_SERVER_URL
+        sync: false
