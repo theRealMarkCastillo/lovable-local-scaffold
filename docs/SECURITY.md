@@ -75,3 +75,5 @@ snapshot before being shown. Sign-out/account changes clear state and invalidate
 older work, including a later sign-in by the same user. This supplements RLS; it
 never replaces authorization. `make browser-test` exercises delayed notes/files
 across an account switch. See [review fixes and limits](REVIEW.md).
+
+Email capture, recovery checks and cloud SMTP configuration: [EMAIL.md](EMAIL.md).

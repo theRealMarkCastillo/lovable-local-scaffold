@@ -20,12 +20,20 @@ services:
         condition: service_healthy
     restart: unless-stopped
   mail:
-    image: axllent/mailpit:v1.29
+    image: axllent/mailpit:v1.32.0
     ports:
       - '127.0.0.1:${MAIL_PORT:-18025}:8025'
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: '1'
       MP_SMTP_AUTH_ALLOW_INSECURE: '1'
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: '500'
+    volumes: ['mail-data:/data']
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 3s
+      timeout: 3s
+      retries: 30
     restart: unless-stopped
   auth:
     environment:
@@ -36,3 +44,6 @@ services:
       GOTRUE_SMTP_MAX_FREQUENCY: 1s
       GOTRUE_RATE_LIMIT_EMAIL_SENT: '100'
       GOTRUE_EXTERNAL_PHONE_ENABLED: 'false'
+
+volumes:
+  mail-data:

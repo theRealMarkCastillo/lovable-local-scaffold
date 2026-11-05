@@ -94,3 +94,5 @@ This mode intentionally calls the configured external development backend. It do
 not start a local Supabase or automatically convert its database to Neon.
 
 For repository and manual backend exports, use the [backend import runbook](BACKEND_IMPORT.md).
+
+Email capture, recovery checks and cloud SMTP configuration: [EMAIL.md](EMAIL.md).

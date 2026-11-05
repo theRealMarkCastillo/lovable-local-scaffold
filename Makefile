@@ -46,3 +46,11 @@ browser-test: tools
 tunnel:
 	python3 scripts/tunnel.py
 tunnel-set: origin
+
+.PHONY: email-config email-test email-smoke
+email-config: tools
+	$(PYTHON) scripts/email_checks.py config
+email-test: tools
+	$(PYTHON) scripts/email_checks.py test
+email-smoke: tools
+	$(PYTHON) scripts/email_checks.py smoke

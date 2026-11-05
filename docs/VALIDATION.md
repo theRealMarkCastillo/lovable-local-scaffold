@@ -187,3 +187,24 @@ external registrations, internal endpoints, cloud differences and imported-app l
 project port, a custom port and invalid-port refusal without launching ngrok. No
 running origin, external registration or cloud deployment was changed. Public-tunnel
 and social-provider runtime validation remain pending.
+
+## Shared email commands — 2026-11-05
+
+Added `make email-config`, `make email-test` and `make email-smoke`, matching the
+cloud scaffold's command names with Supabase-native Auth behavior. See
+[EMAIL.md](EMAIL.md) for configuration names, SMTP/cloud boundaries and recovery UI
+limitations. Mailpit is aligned to v1.32.0 with a health check, project-scoped
+persistent inbox and a 500-message cap. Upgrading replaced the old in-memory inbox;
+existing Auth/database data and the configured public origin were preserved.
+
+`make check email-config email-test email-smoke` passed on this local instance:
+synthetic signup capture, confirmation, password login, recovery email/action,
+backend password change, login with the new password and old-password rejection.
+This is API-level recovery coverage; no password-reset UI was implemented or claimed.
+Synthetic users/messages remain local. No real email was delivered externally.
+
+`make backend-test frontend-test up smoke` also passed: 24 Python tests,
+3 frontend identity tests, healthy local stack and existing full Auth/RLS/private
+storage/function/logout/SSR checks. Syntax, diff and documentation-link checks pass.
+These email changes are recorded in the source accompanying this report. No cloud
+deployment, external SMTP registration or public tunnel was performed. Real-provider delivery remains pending.

@@ -131,3 +131,5 @@ Sources: [ngrok forwarding](https://ngrok.com/docs/gateway/endpoints/agent-cli-q
 [Supabase self-hosted OAuth](https://supabase.com/docs/guides/self-hosting/self-hosted-oauth),
 [Keycloak brokering](https://www.keycloak.org/docs/latest/server_admin/#_identity_broker),
 [Apple web return URLs](https://developer.apple.com/documentation/signinwithapple/configuring-your-webpage-for-sign-in-with-apple).
+
+Email capture, recovery checks and cloud SMTP configuration: [EMAIL.md](EMAIL.md).

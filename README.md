@@ -196,3 +196,14 @@ separate reviewed upgrade using upstream tooling, not an untested checkbox.
 
 Read [SSR migration lessons](docs/SSR_MIGRATION.md), [migration](docs/MIGRATION.md), [security](docs/SECURITY.md),
 [hosting options](docs/CLOUD.md), and [validation](docs/VALIDATION.md).
+
+## Email capture and recovery checks
+
+```sh
+make email-config   # Apply local Auth/Mailpit settings; already included in make up
+make email-test     # Capture a synthetic signup confirmation
+make email-smoke    # Verify confirmation and backend password recovery/login
+```
+
+See [EMAIL.md](docs/EMAIL.md) for the shared command contract, inbox address, cloud
+SMTP configuration and the distinction between backend recovery and application UI.
