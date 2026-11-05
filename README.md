@@ -141,6 +141,9 @@ Use [the backend export/import runbook](docs/BACKEND_IMPORT.md) for repository S
 manually saved SQL, Drizzle journals, Edge Functions/shared code, database archives,
 table CSVs, downloaded storage files and job definitions. Collection never executes
 SQL or functions. Artifacts stay in ignored, private `.imports/` bundles with checksums.
+Edge Function source normally arrives in `supabase/functions/` with the source ZIP
+or Git checkout. The separate database backup excludes that code. Deploying/activating
+functions and configuring their secrets are separate from exporting their source.
 
 ```sh
 python3 scripts/backend.py import /path/to/export --name my-app

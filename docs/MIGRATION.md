@@ -32,19 +32,22 @@ the tested TanStack Start dashboard case and optional Keycloak integration.
    Edge Functions, scheduled jobs, secrets, server routes and external API calls.
 3. Separate **frontend hosting** from **backend migration**. A local frontend can
    still be calling the original cloud backend; that is not a fully local migration.
-4. Start a fresh local Supabase database. Replace the sample migration with the app's
-   reviewed migration sequence **before first use**; don't combine unrelated sample
-   schemas blindly. This runner records checksums and rejects edited applied files.
+4. Collect the app's backend with `scripts/backend.py import`, then select it with
+   `activate` before the fresh stack's first `make up`. This skips sample SQL. Apply
+   the reviewed migration layout explicitly with `migrate --layout ... --execute`;
+   don't combine unrelated schemas. See [the import runbook](BACKEND_IMPORT.md).
 5. Add synthetic fixtures for application data. Reproduce RLS, policies, grants,
    triggers, functions and required extensions, not just table definitions. Verify
    anonymous access denial and two-user/tenant isolation through the same browser API.
 6. Configure the exported client with this local gateway URL and anon/public key.
    Exported Vite `VITE_*` values may be build-time; this example uses runtime config.
    Never replace browser anon credentials with a service-role key to bypass errors.
-7. Add function source and its secrets explicitly. Our sample mounts only `analyze`;
-   additional functions need mounts/configuration. Keep function JWT checks and
-   user authorization. Per-function authorization can still be required even when
-   the runtime validates a JWT (an anon API key can itself be a valid JWT).
+7. Import Edge Function source from `supabase/functions/` in the source ZIP/Git
+   checkout, including shared modules and Deno maps. Compare it with Lovable's deployed
+   function list; obtain missing source separately only when a discrepancy remains.
+   The database backup excludes function code. Activate the imported bundle and set
+   local function secrets separately. Preserve each function's JWT policy and user
+   authorization: a valid JWT can be an anon API key, not a signed-in user.
 8. Recreate bucket settings and object policies. Actual files and metadata are a
    separate migration; a database dump alone does not copy object bytes.
 9. Configure local signup/confirmation/recovery URLs and email capture. Social login

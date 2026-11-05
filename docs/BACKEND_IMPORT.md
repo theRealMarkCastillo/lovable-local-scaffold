@@ -15,7 +15,7 @@ export into a working app without review. Python 3.11+ is required.
 | Manually saved DDL | Reviewed SQL saved from your own schema/export process | Repeat `--sql` in the intended order; no inferred policy reconstruction |
 | Database structure/data/users | More → Database → Manage → Settings → Export project data | Capture `.backup` or its ZIP wrapper; inspect catalog, select, then restore |
 | Per-table CSV | Database table export | Explicit schema/table/column mapping and transactional insert |
-| Edge Functions | `supabase/functions/`; obtain missing source separately | Capture function folders, `_shared`, Deno maps and config; activate explicitly |
+| Edge Function source | `supabase/functions/` in the source ZIP or Git-synced repository | Capture function folders, `_shared`, Deno maps and config; activate explicitly |
 | Storage bytes | Download separately from More → Storage | Preserve directory structure/checksums; upload and ownership validation remain manual |
 | Scheduled jobs | Inventory jobs in Lovable and database schedules; save definitions separately | `--jobs` captures a definition file; review destinations and enable manually |
 | Secrets/provider settings | Inventory names; create credentials under your own accounts | Values are not exported or copied from the source `.env` |
@@ -29,6 +29,30 @@ Sources checked 2026-11-05:
 [Lovable database export](https://docs.lovable.dev/features/database-backups),
 [Lovable external deployment](https://docs.lovable.dev/tips-tricks/external-deployment-hosting),
 [Supabase self-hosted functions](https://supabase.com/docs/guides/self-hosting/self-hosted-functions).
+
+## Source export versus database export
+
+**Edge Function source normally comes with the project source ZIP or Git-synced
+repository**, under `supabase/functions/`. It is not routinely a separate download.
+Check that directory, including shared modules and Deno configuration, before looking
+for another export mechanism. [Lovable's deployment guide](https://docs.lovable.dev/tips-tricks/external-deployment-hosting)
+identifies the source location, and its [code export FAQ](https://docs.lovable.dev/introduction/faq)
+describes source download and Git sync.
+
+The **database backup** excludes Edge Function code. That exclusion describes the
+backup archive, not the source-code bundle. Function secrets and provider credentials
+also need separate configuration; downloading code does not transfer those values.
+
+Compare the functions listed in Lovable's Edge Functions view with the latest source
+export/checkout. If deployed functions have no matching source, resolve that specific
+gap before migration: verify the selected project and branch, refresh Git sync or
+redownload the source, then obtain any still-missing function source separately.
+An absent directory establishes only that this checkout has no exported functions;
+it does not prove the live backend has none.
+
+Function **deployment** is a separate step even when the source is included. This
+scaffold activates local runtime mounts; managed Supabase uses its deployment tools.
+TanStack server functions stay in the Node application build.
 
 ## Collect and inspect
 
